@@ -33,37 +33,37 @@ def write_random_data(filepath: str, size_bytes: int) -> list[str, int]:
     return [sha1_hash.hexdigest(), total_bytes]
 
 
-def is_sha1_hex(s: str) -> bool:
+def is_sha1_hexstring(s: str) -> bool:
     return all(c in "0123456789abcdef" for c in s) and len(s) == 40
 
 
-def validate_data(filepath: str) -> bool:
+def validate_single_chunk(chunkfile_path: str) -> bool:
     sha1_hash = hashlib.sha1()
-    hash_file = filepath + ".sha1"
+    hash_filepath = chunkfile_path + ".sha1"
 
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"File {filepath} not found")
+    if not os.path.exists(chunkfile_path):
+        raise FileNotFoundError(f"File {chunkfile_path} not found")
 
-    if not os.path.exists(hash_file):
-        raise FileNotFoundError(f"Hash file {hash_file} not found")
+    if not os.path.exists(hash_filepath):
+        raise FileNotFoundError(f"Hash file {hash_filepath} not found")
 
-    with open(hash_file, "r") as f:
+    with open(hash_filepath, "r") as f:
         hash_value = f.read()
 
     if not hash_value:
         raise ValueError("Hash value is empty")
 
-    if not is_sha1_hex(hash_value):
+    if not is_sha1_hexstring(hash_value):
         raise ValueError("Hash value is not a valid SHA-1 hash")
 
-    file_size = os.path.getsize(filepath)
+    file_size = os.path.getsize(chunkfile_path)
     if file_size % 1000 != 0:
         print(
             f"Warning: File size is not a multiple of 1000 bytes, size: {file_size}. Validating checksum anyway..."
-            f"File: {filepath}, sha1: {hash_value}"
+            f"File: {chunkfile_path}, sha1: {hash_value}"
         )
 
-    with open(filepath, "rb") as f:
+    with open(chunkfile_path, "rb") as f:
         while True:
             data = f.read(1024)
             if not data:
@@ -117,7 +117,7 @@ def cmd_test_disk(
     ):
         fn = f"chunk_{i}.dat"
         fp = os.path.join(dest_folder, fn)
-        assert validate_data(fp), f"Data validation failed for {fp} aborting..."
+        assert validate_single_chunk(fp), f"Data validation failed for {fp} aborting..."
 
     print("All data validated successfully")
 
@@ -163,7 +163,7 @@ def cmd_validate(root_folder: str):
     )
 
     for fp in tqdm(to_test, desc="Validating data", unit="chunk", dynamic_ncols=True):
-        assert validate_data(fp), f"Data validation failed for {fp} aborting..."
+        assert validate_single_chunk(fp), f"Data validation failed for {fp} aborting..."
 
     print("All data validated successfully")
 
