@@ -57,7 +57,8 @@ def validate_data(filepath: str) -> bool:
     file_size = os.path.getsize(filepath)
     if file_size % 1000 != 0:
         print(
-            f"Warning: File size is not a multiple of 1000 bytes, size: {file_size}. Validating sha1:{hash_value} anyway..."
+            f"Warning: File size is not a multiple of 1000 bytes, size: {file_size}. Validating checksum anyway..."
+            f"File: {filepath}, sha1: {hash_value}"
         )
 
     with open(filepath, "rb") as f:
