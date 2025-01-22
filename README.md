@@ -22,7 +22,7 @@ Written in python
 
 `$ disktester validate -f <place where disk is mounted>`
 
-Feature not implemented - however can be useful for old drives with a prior test
+Useful for testing data retention on old drives with a prior test files written
 
 # Help
 

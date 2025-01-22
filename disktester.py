@@ -6,6 +6,8 @@ import argparse
 from tqdm import tqdm
 import re
 
+DEFAULT_CHUNK_SIZE = 200 * 1e6  # 200MB
+
 
 def write_random_data(filepath: str, size_bytes: int) -> list[str, int]:
     sha1_hash = hashlib.sha1()
@@ -76,10 +78,13 @@ def get_space_available(path: str) -> int:
     return stat.free
 
 
-CHUNK_SIZE = 200 * 1e6
+def is_empty_folder(folder: str) -> bool:
+    return not any(f for f in os.listdir(folder) if not f in [".DS_Store", "Thumbs.db"])
 
 
-def cmd_test_disk(root_folder: str, write_bytes: int, chunk_size: int = CHUNK_SIZE):
+def cmd_test_disk(
+    root_folder: str, write_bytes: int, chunk_size: int = DEFAULT_CHUNK_SIZE
+):
     dest_folder = os.path.join(root_folder, "disktester")
     write_GB = int(write_bytes // 1e9)
     if not os.path.exists(dest_folder):
@@ -117,10 +122,6 @@ def cmd_test_disk(root_folder: str, write_bytes: int, chunk_size: int = CHUNK_SI
     print("All data validated successfully")
 
 
-def is_empty_folder(folder: str) -> bool:
-    return not any(f for f in os.listdir(folder) if not f in [".DS_Store", "Thumbs.db"])
-
-
 def cmd_clean_disk(root_folder: str):
     dest_folder = os.path.join(root_folder, "disktester")
     if not os.path.exists(dest_folder):
@@ -131,7 +132,7 @@ def cmd_clean_disk(root_folder: str):
     for root, dirs, files in os.walk(dest_folder):
         for f in files:
             valid_remove_fn = None
-            if re.match(r"chunk_\d+\.dat(?:\.sha1)?", f) is not None:
+            if re.fullmatch(r"chunk_\d+\.dat(?:\.sha1)?", f) is not None:
                 valid_remove_fn = os.path.join(root, f)
 
             if valid_remove_fn is not None:
@@ -143,6 +144,28 @@ def cmd_clean_disk(root_folder: str):
         print(f"Folder {dest_folder} is now empty and has been removed")
     else:
         print(f"Folder {dest_folder} is not empty, not removing")
+
+
+def cmd_validate(root_folder: str):
+    dest_folder = os.path.join(root_folder, "disktester")
+    if not os.path.exists(dest_folder):
+        print(f"Folder {dest_folder} does not exist, nothing to validate")
+        return
+
+    to_test = []
+    for f in os.listdir(dest_folder):
+        if re.fullmatch(r"chunk_\d+\.dat", f) is not None:
+            fp = os.path.join(dest_folder, f)
+            to_test.append(fp)
+
+    print(
+        f"Validating data in folder {dest_folder}, {len(to_test)} data chunk files found"
+    )
+
+    for fp in tqdm(to_test, desc="Validating data", unit="chunk", dynamic_ncols=True):
+        assert validate_data(fp), f"Data validation failed for {fp} aborting..."
+
+    print("All data validated successfully")
 
 
 if __name__ == "__main__":
@@ -160,7 +183,11 @@ if __name__ == "__main__":
     # A folder with only .DS_Store and Thumbs.db files is considered empty
 
     args.add_argument(
-        "action", type=str, help="Action to perform: test or clean", default="test"
+        "action",
+        type=str,
+        help="Action to perform: test or clean",
+        default="test",
+        choices=["test", "clean", "validate"],
     )
     args.add_argument(
         "-f",
@@ -190,3 +217,5 @@ if __name__ == "__main__":
         cmd_test_disk(args.folder, args.size * 1e9, args.chunksize * 1e6)
     elif args.action == "clean":
         cmd_clean_disk(args.folder)
+    elif args.action == "validate":
+        cmd_validate(args.folder)
