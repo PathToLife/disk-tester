@@ -55,8 +55,10 @@ def validate_data(filepath: str) -> bool:
         raise ValueError("Hash value is not a valid SHA-1 hash")
 
     file_size = os.path.getsize(filepath)
-    if file_size % 1024 != 0:
-        print(f"Warning: File size is not a multiple of 1024 bytes, continuing...")
+    if file_size % 1000 != 0:
+        print(
+            f"Warning: File size is not a multiple of 1000 bytes, size: {file_size}. Validating sha1:{hash_value} anyway..."
+        )
 
     with open(filepath, "rb") as f:
         while True:
